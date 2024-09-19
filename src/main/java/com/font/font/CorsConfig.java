@@ -23,7 +23,7 @@ public class CorsConfig {
             @Override
             public void addCorsMappings(CorsRegistry registry) {
                 registry.addMapping("/**")
-                        .allowedOrigins("https://luisimaicela.com/") // Cambia esta URL por la de tu frontend
+                        .allowedOrigins("https://luisimaicela.com") // Cambia esta URL por la de tu frontend
                         .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                         .allowedHeaders("*")
                         .allowCredentials(true);
