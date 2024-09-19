@@ -12,9 +12,11 @@ import io.github.cdimascio.dotenv.Dotenv;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.client.RestTemplate;
 
 import java.util.Map;
 import java.util.HashMap;
+import java.util.List;
 
 @RestController
 public class FontController {
@@ -29,16 +31,16 @@ public class FontController {
 
     @GetMapping("/fonts")
     @ResponseBody
-    public Map<String, Map<String, String>> getFonts() {
+    public Map<String, String> getFonts() {
         // Mapa de combinaciones de fuentes locales
-        Map<String, Map<String, String>> fonts = new HashMap<>();
+        Map<String, String> fonts = new HashMap<>();
 
-        // Añadir combinaciones de fuentes que desees con sus enlaces
-        fonts.put("Merriweather", Map.of("pair", "Open Sans", "link", "https://fonts.googleapis.com/css2?family=Merriweather&family=Open+Sans&display=swap"));
-        fonts.put("Playfair Display", Map.of("pair", "Montserrat", "link", "https://fonts.googleapis.com/css2?family=Playfair+Display&family=Montserrat&display=swap"));
-        fonts.put("Lato", Map.of("pair", "Roboto", "link", "https://fonts.googleapis.com/css2?family=Lato&family=Roboto&display=swap"));
-        fonts.put("Raleway", Map.of("pair", "Roboto Slab", "link", "https://fonts.googleapis.com/css2?family=Raleway&family=Roboto+Slab&display=swap"));
-        fonts.put("Amatic SC", Map.of("pair", "Josefin Sans", "link", "https://fonts.googleapis.com/css2?family=Amatic+SC&family=Josefin+Sans&display=swap"));
+        // Añadir combinaciones de fuentes que desees
+        fonts.put("Merriweather", "Open Sans");
+        fonts.put("Playfair Display", "Montserrat");
+        fonts.put("Lato", "Roboto");
+        fonts.put("Raleway", "Roboto Slab");
+        fonts.put("Amatic SC", "Josefin Sans");
 
         // Verifica si la clave API está presente
         if (apiKey == null || apiKey.isEmpty()) {
@@ -46,7 +48,23 @@ public class FontController {
             return fonts; // Devuelve las combinaciones locales si falta la clave API
         }
 
-        // Lógica para obtener fuentes desde Google Fonts API se ha eliminado, ya que no es necesaria
+        // Lógica para obtener fuentes desde Google Fonts API
+        try {
+            RestTemplate restTemplate = new RestTemplate();
+            String url = "https://www.googleapis.com/webfonts/v1/webfonts?key=" + apiKey;
+            Map<String, Object> response = restTemplate.getForObject(url, Map.class);
+
+            if (response != null && response.containsKey("items")) {
+                // Procesa la respuesta para obtener todas las fuentes
+                List<Map<String, Object>> items = (List<Map<String, Object>>) response.get("items");
+                for (Map<String, Object> item : items) {
+                    String family = (String) item.get("family");
+                    fonts.putIfAbsent(family, ""); // Añade la fuente a la lista sin combinación si no existe ya
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
 
         return fonts; // Devuelve el mapa como JSON
     }
