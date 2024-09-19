@@ -17,6 +17,7 @@ import org.springframework.web.client.RestTemplate;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.List;
+import java.util.ArrayList;
 
 @RestController
 public class FontController {
@@ -31,65 +32,56 @@ public class FontController {
 
     @GetMapping("/fonts")
     @ResponseBody
-    public Map<String, Object> getFonts() {
-        // Mapa de combinaciones de fuentes locales
-        Map<String, String> fonts = new HashMap<>();
-        
-        // Añadir combinaciones de fuentes que desees
-        fonts.put("Merriweather", "Open Sans");
-        fonts.put("Playfair Display", "Montserrat");
-        fonts.put("Lato", "Roboto");
-        fonts.put("Raleway", "Roboto Slab");
-        fonts.put("Amatic SC", "Josefin Sans");
-
-        // Crear una lista para almacenar todas las fuentes
+    public Map<String, List<Map<String, String>>> getFonts() {
         List<Map<String, String>> allFonts = new ArrayList<>();
+        Map<String, String> combinedFonts = new HashMap<>();
 
-        // Añadir combinaciones al principio
-        for (Map.Entry<String, String> entry : fonts.entrySet()) {
+        // Añadir combinaciones de fuentes
+        combinedFonts.put("Merriweather", "Open Sans");
+        combinedFonts.put("Playfair Display", "Montserrat");
+        combinedFonts.put("Lato", "Roboto");
+        combinedFonts.put("Raleway", "Roboto Slab");
+        combinedFonts.put("Amatic SC", "Josefin Sans");
+
+        // Añadir las combinaciones al principio
+        for (Map.Entry<String, String> entry : combinedFonts.entrySet()) {
             Map<String, String> fontEntry = new HashMap<>();
             fontEntry.put("font", entry.getKey());
             fontEntry.put("pair", entry.getValue());
             allFonts.add(fontEntry);
         }
 
+        // Añadir un separador para "Resto de fuentes"
+        Map<String, String> separator = new HashMap<>();
+        separator.put("font", "Resto de fuentes");
+        separator.put("pair", "");
+        allFonts.add(separator);
+
         // Verifica si la clave API está presente
-        if (apiKey == null || apiKey.isEmpty()) {
-            System.out.println("Error: API Key is missing");
-            return Map.of("fonts", allFonts); // Devuelve las combinaciones locales si falta la clave API
-        }
+        if (apiKey != null && !apiKey.isEmpty()) {
+            try {
+                RestTemplate restTemplate = new RestTemplate();
+                String url = "https://www.googleapis.com/webfonts/v1/webfonts?key=" + apiKey;
+                Map<String, Object> response = restTemplate.getForObject(url, Map.class);
 
-        // Lógica para obtener fuentes desde Google Fonts API
-        try {
-            RestTemplate restTemplate = new RestTemplate();
-            String url = "https://www.googleapis.com/webfonts/v1/webfonts?key=" + apiKey;
-            Map<String, Object> response = restTemplate.getForObject(url, Map.class);
+                if (response != null && response.containsKey("items")) {
+                    List<Map<String, Object>> items = (List<Map<String, Object>>) response.get("items");
 
-            if (response != null && response.containsKey("items")) {
-                // Procesa la respuesta para obtener todas las fuentes
-                List<Map<String, Object>> items = (List<Map<String, Object>>) response.get("items");
-                
-                // Añadir un salto para "Resto de fuentes"
-                Map<String, String> restOfFontsHeader = new HashMap<>();
-                restOfFontsHeader.put("font", "Resto de fuentes");
-                restOfFontsHeader.put("pair", ""); // Sin combinación
-                allFonts.add(restOfFontsHeader);
-
-                // Añadir las fuentes restantes
-                for (Map<String, Object> item : items) {
-                    String family = (String) item.get("family");
-                    if (!fonts.containsKey(family)) { // Solo añadir si no es una combinación definida
-                        Map<String, String> fontEntry = new HashMap<>();
-                        fontEntry.put("font", family);
-                        fontEntry.put("pair", ""); // Sin combinación
-                        allFonts.add(fontEntry);
+                    for (Map<String, Object> item : items) {
+                        String family = (String) item.get("family");
+                        if (!combinedFonts.containsKey(family)) { // Añadir solo si no es parte de las combinaciones
+                            Map<String, String> fontEntry = new HashMap<>();
+                            fontEntry.put("font", family);
+                            fontEntry.put("pair", "");
+                            allFonts.add(fontEntry);
+                        }
                     }
                 }
+            } catch (Exception e) {
+                e.printStackTrace();
             }
-        } catch (Exception e) {
-            e.printStackTrace();
         }
 
-        return Map.of("fonts", allFonts); // Devuelve la lista como JSON
+        return Map.of("fonts", allFonts);
     }
 }
