@@ -1,2 +1,2 @@
 # FontApplication
-Use APY Google Fonts
+Use API Google Fonts
